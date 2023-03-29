@@ -5,7 +5,8 @@ on:
     paths-ignore:
       - '**.md'
 jobs:
-  test:
+  validation:
+    name: 'PR and Commit Validation'
     runs-on: ubuntu-latest
 
     permissions: # https://github.com/dorny/test-reporter/issues/168
