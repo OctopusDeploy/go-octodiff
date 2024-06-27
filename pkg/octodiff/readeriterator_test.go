@@ -1,6 +1,7 @@
 package octodiff
 
 import (
+	"bufio"
 	"errors"
 	"github.com/stretchr/testify/assert"
 	"io"
@@ -541,4 +542,86 @@ func TestReaderIterator_FailureWhileAlsoProvidingDataNBytes(t *testing.T) {
 	assert.Equal(t, []byte("abcdefgh"), received)
 
 	assert.True(t, reader.AllCallbacksConsumed())
+}
+
+func TestReaderIterator_BufferOverBufio_BoundaryCrossing(t *testing.T) {
+	// This simulates a boundary-crossing bug that was found in SignatureReader
+	underlyingReader := newMockReader(
+		returnData([]byte("abcdefghij")),
+		returnData([]byte("klmnopqrst")),
+		returnDataWithEof([]byte("uvwxyz")))
+
+	// bufio reader buffers in chunks of 10
+	reader := bufio.NewReaderSize(underlyingReader, 10)
+
+	// over the top, we want to read chunks of 8
+	iter := NewReaderIteratorSize(reader, 8)
+
+	assert.True(t, iter.Next())
+	assert.Equal(t, "abcdefgh", string(iter.Current))
+
+	// boundary cross here
+	assert.True(t, iter.Next())
+	assert.Equal(t, "ijklmnop", string(iter.Current))
+
+	assert.True(t, iter.Next())
+	assert.Equal(t, "qrstuvwx", string(iter.Current))
+
+	assert.True(t, iter.Next())
+	assert.Equal(t, "yz", string(iter.Current))
+
+	// EOF now
+	assert.False(t, iter.Next())
+
+	assert.True(t, underlyingReader.AllCallbacksConsumed())
+}
+
+func TestReaderIterator_BufferOverBufio_BoundaryCrossingEof(t *testing.T) {
+	// This simulates a boundary-crossing bug that was found in SignatureReader
+	underlyingReader := newMockReader(
+		returnData([]byte("abcdefghij")),
+		returnDataWithEof([]byte("klmn")))
+
+	// bufio reader buffers in chunks of 10
+	reader := bufio.NewReaderSize(underlyingReader, 10)
+
+	// over the top, we want to read chunks of 8
+	iter := NewReaderIteratorSize(reader, 8)
+
+	assert.True(t, iter.Next())
+	assert.Equal(t, "abcdefgh", string(iter.Current))
+
+	// boundary cross here into EOF
+	assert.True(t, iter.Next())
+	assert.Equal(t, "ijklmn", string(iter.Current))
+
+	// EOF now
+	assert.False(t, iter.Next())
+
+	assert.True(t, underlyingReader.AllCallbacksConsumed())
+}
+
+func TestReaderIterator_BufferOverBufio_BoundaryCrossingStopAfterNBytes(t *testing.T) {
+	// This simulates a boundary-crossing bug that was found in SignatureReader
+	underlyingReader := newMockReader(
+		returnData([]byte("abcdefghij")),
+		returnDataWithEof([]byte("klmnopqrst")))
+
+	// bufio reader buffers in chunks of 10
+	reader := bufio.NewReaderSize(underlyingReader, 10)
+
+	// over the top, we want to read chunks of 8, stopping after 12 bytes
+	iter := NewReaderIteratorSizeNBytes(reader, 8, 12)
+
+	assert.True(t, iter.Next())
+	assert.Equal(t, "abcdefgh", string(iter.Current))
+
+	// boundary cross here
+	assert.True(t, iter.Next())
+	assert.Equal(t, "ijkl", string(iter.Current))
+
+	// EOF now
+	assert.False(t, iter.Next())
+
+	assert.True(t, underlyingReader.AllCallbacksConsumed())
 }

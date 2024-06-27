@@ -42,7 +42,24 @@ func (b *ReaderIterator) Next() bool {
 		}
 	}
 
-	bytesRead, err := b.reader.Read(localReadBuffer)
+	var err error = nil
+	var bytesRead = 0
+	tmpBuffer := localReadBuffer
+	for {
+		// loop because the underlying reader can return fewer bytes than what we asked for, even though it isn't completed.
+		// bufio.Reader does this when crossing block boundaries, and any other underlying reader could too.
+		tmpBytesRead, tmpErr := b.reader.Read(tmpBuffer)
+
+		bytesRead += tmpBytesRead
+		err = tmpErr
+
+		if err != nil || tmpBytesRead == 0 || bytesRead == len(localReadBuffer) { // if we read all the bytes, we're good. If we read no bytes, fall through to EOF handling below
+			break
+		}
+		// else, our localReadBuffer isn't full, shift the write-window and loop again
+		tmpBuffer = tmpBuffer[tmpBytesRead:]
+	}
+
 	b.nBytesReadSoFar += int64(bytesRead)
 
 	if b.nBytesToRead > 0 { // if we've been told to stop after a certain number of bytes, control this by simulating an EOF
