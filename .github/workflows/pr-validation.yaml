@@ -33,7 +33,7 @@ jobs:
         working-directory: ./pkg
 
       - name: Test Report
-        uses: dorny/test-reporter@6e6a65b7a0bd2c9197df7d0ae36ac5cee784230c # v2.0.0
+        uses: dorny/test-reporter@dc3a92680fcc15842eef52e8c4606ea7ce6bd3f3 # v2.1.1
         if: success() || failure()
         with:
           name: Test Results
