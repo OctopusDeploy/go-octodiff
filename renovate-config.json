@@ -1,0 +1,23 @@
+{
+  "extends": [
+    "config:recommended"
+  ],
+  "managers": {
+    "go-mod": {
+    }
+  },
+  "packageRules": [
+    {
+      "matchDatasources": ["go-mod"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "automergeType": "branch-merge"
+    }
+  ],
+  "platform": "github",
+  "timezone": "Australia/Brisbane",
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 1,
+  "branchPrefix": "renovate/",
+  "labels": ["dependencies"]
+}
