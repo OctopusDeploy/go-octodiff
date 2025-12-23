@@ -8,6 +8,7 @@ on:
 
 env:
   GO_VERSION: 1.21
+  APP_VERSION: 'v0.0.0-dev'
 jobs:
   
   test:
@@ -51,13 +52,27 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Determine Version from PR
+        if: github.event_name == 'pull_request'
+        id: pr_version
+        run: |
+          BRANCH_NAME=$(echo ${{ github.head_ref }} | tr '/' '-' | tr '_' '-')
+          CURRENT_VERSION=$(git describe --tags --abbrev=0 || echo "0.0.0")
+          APP_VERSION="${CURRENT_VERSION}-${BRANCH_NAME}"
+          echo "APP_VERSION=${APP_VERSION}"
+          echo "APP_VERSION=${APP_VERSION}" >> "$GITHUB_ENV"
+
+      - name: Determine Version from Release
+        if: github.event_name == 'release'
+        id: release_version
+        run: |
+          echo "APP_VERSION=${{ github.event.release.tag_name }}" >> "$GITHUB_ENV"
+
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
           go-version:  ${{env.GO_VERSION}}
-
-#      - name: Build binary
-#        run: go build -o bin/octodiff cmd/octodiff/main.go
+          
       - name: Build for ${{ matrix.goos }}/${{ matrix.goarch }}
         env:
           GOOS: ${{ matrix.goos }}
@@ -67,9 +82,9 @@ jobs:
           if [ "${{ matrix.goos }}" = "windows" ]; then
             OUTPUT_NAME="${OUTPUT_NAME}.exe"
           fi
-          go build -o build/${{ matrix.goos }}_${{ matrix.goarch }}/$OUTPUT_NAME  cmd/octodiff/main.go
+          go build -o build/${{ matrix.goos }}_${{ matrix.goarch }}/$OUTPUT_NAME -ldflags="-X 'main.version=${{ env.APP_VERSION }}'" ./cmd/octodiff/
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: octodiff-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: build/${{ matrix.goos }}_${{ matrix.goarch }}/
+          name: octodiff-${{ matrix.goos }}-${{ matrix.goarch }}.${{env.APP_VERSION}}
+          path: build/${{ matrix.goos }}_${{ matrix.goarch }}
