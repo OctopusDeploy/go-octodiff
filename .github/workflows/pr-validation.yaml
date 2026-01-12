@@ -36,13 +36,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     name: 'Build'
-    needs: test
+    #needs: test
     strategy:
       matrix:
-        goos: [ linux, windows, darwin ]
-        goarch: [ amd64, arm64 ]
-        #goos: [  windows ]
-        #goarch: [ amd64 ]
+        #goos: [ linux, windows, darwin ]
+        #goarch: [ amd64, arm64 ]
+        goos: [  windows ]
+        goarch: [ amd64 ]
     steps:
       - uses: actions/checkout@v6
 
@@ -82,3 +82,31 @@ jobs:
         with:
           name: octodiff-${{ matrix.goos }}-${{ matrix.goarch }}.${{env.APP_VERSION}}
           path: build/${{ matrix.goos }}_${{ matrix.goarch }}
+
+      - name: Generate SBOM with Trivy
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          format: "cyclonedx"
+          scan-type: "fs"
+          scan-ref: "go.mod"
+          output: "sbom.json"
+
+      - name: Upload SBOM as Artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: sbom.json
+          path: sbom.json
+          overwrite: true
+
+      #- name: Upload SBOM to Dependency Track
+      #  if: github.event_name == 'release'
+      #  uses: OctopusDeploy/upload-sbom-go@v1.0.0
+      #  with:
+      #    dependency-track-url: ${{ secrets.DTRACK_URL }}
+      #    dependency-track-key: ${{ secrets.DTRACK_KEY }}
+      #    project-name: kubernetes-monitor
+      #    project-version: ${{ env.version }}
+      #    parent-name: kubernetes-monitor
+      #    is-latest: true
+      #    project-tags: kubernetes-monitor,modern-deployments
+      #    sbom-file: "sbom.json"

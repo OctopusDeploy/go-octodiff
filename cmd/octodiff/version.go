@@ -16,7 +16,7 @@ func NewCmdVersion() *cobra.Command {
 		Use:  "version",
 		Long: "Reports the version of octodiff",
 		RunE: func(c *cobra.Command, args []string) error {
-			// pick up positional arguments if not explicitly specified using --basis-file and --signature-file
+
 			fmt.Printf("App Version: %s\n", version)
 
 			if buildInfo, ok := debug.ReadBuildInfo(); ok {
